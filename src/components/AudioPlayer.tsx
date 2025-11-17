@@ -2,11 +2,12 @@ import React, { useRef, useEffect, useState } from 'react';
 
 interface AudioPlayerProps {
   audioFile: File | null;
+  audioUrl?: string | null;
   seekTime: number | null;
   onTimeUpdate: (time: number) => void;
 }
 
-export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, seekTime, onTimeUpdate }) => {
+export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, audioUrl, seekTime, onTimeUpdate }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -18,8 +19,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, seekTime, o
       const url = URL.createObjectURL(audioFile);
       audioRef.current.src = url;
       return () => URL.revokeObjectURL(url);
+    } else if (audioUrl && audioRef.current) {
+      audioRef.current.src = audioUrl;
     }
-  }, [audioFile]);
+  }, [audioFile, audioUrl]);
 
   useEffect(() => {
     if (seekTime !== null && audioRef.current) {
@@ -59,7 +62,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, seekTime, o
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!audioRef.current || !audioFile) return;
+    if (!audioRef.current || (!audioFile && !audioUrl)) return;
 
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
@@ -87,7 +90,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, seekTime, o
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
       />
-      <button onClick={togglePlayPause} style={styles.button} disabled={!audioFile}>
+      <button onClick={togglePlayPause} style={styles.button} disabled={!audioFile && !audioUrl}>
         {isPlaying ? '暂停' : '播放'}
       </button>
       <span style={styles.time}>
