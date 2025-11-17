@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: audio-transcription-app
+    ports:
+      - "8080:80"      # 前端访问端口
+      - "3001:3001"    # 后端 API 端口
+    volumes:
+      # 将数据目录映射到宿主机，确保数据持久化
+      - ./data/uploads:/app/data/uploads
+      - ./data/markdown-files:/app/data/markdown-files
+      - ./data/db:/app/data/db
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/projects/markdown-files"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

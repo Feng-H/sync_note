@@ -49,54 +49,121 @@
 
 ## 快速开始
 
-### 1. 克隆项目
+### 方式一：Docker 部署（推荐）⭐
+
+**前提条件：**
+- 安装 Docker 和 Docker Compose
+
+#### 一键启动（最简单）
+
+```bash
+git clone <repository-url>
+cd audio-transcription-app
+./start.sh
+```
+
+启动脚本会自动：
+- 创建数据目录
+- 初始化数据库
+- 创建环境变量文件
+- 启动 Docker 容器
+
+#### 手动启动
+
+1. **克隆项目**
 ```bash
 git clone <repository-url>
 cd audio-transcription-app
 ```
 
-### 2. 初始化数据库
+2. **配置环境变量（可选）**
+```bash
+cp .env.example .env
+# 编辑 .env 文件，修改 JWT_SECRET
+```
+
+3. **启动服务**
+```bash
+docker-compose up -d
+```
+
+4. **访问应用**
+- 前端：http://localhost:8080
+- 后端 API：http://localhost:3001
+
+5. **查看日志**
+```bash
+docker-compose logs -f
+```
+
+6. **停止服务**
+```bash
+docker-compose down
+```
+
+#### 数据持久化
+
+所有数据都存储在 `./data/` 目录下（映射到宿主机）：
+- `./data/uploads/` - 音频文件
+- `./data/markdown-files/` - Markdown 文件
+- `./data/db/` - 数据库文件
+
+即使删除容器，数据也不会丢失。
+
+### 方式二：本地开发部署
+
+**前提条件：**
+- Node.js 18 或更高版本
+
+**步骤：**
+
+1. **克隆项目**
+```bash
+git clone <repository-url>
+cd audio-transcription-app
+```
+
+2. **初始化数据库**
 ```bash
 cd server
 cp database.example.json database.json
+cd ..
 ```
 
-### 3. 安装依赖
-
-**前端依赖：**
+3. **安装依赖**
 ```bash
+# 前端依赖
 npm install
-```
 
-**后端依赖：**
-```bash
+# 后端依赖
 cd server
 npm install
 cd ..
 ```
 
-### 4. 启动服务
+4. **启动服务**
 
-**启动后端服务器：**
+启动后端（终端1）：
 ```bash
 cd server
 npm run dev
 ```
-后端服务器将运行在 http://localhost:3001
 
-**启动前端开发服务器（新终端）：**
+启动前端（终端2）：
 ```bash
 npm run dev
 ```
-前端应用将运行在 http://localhost:5173
 
-### 5. 登录使用
+5. **访问应用**
+- 前端：http://localhost:5173
+- 后端 API：http://localhost:3001
 
-打开浏览器访问 http://localhost:5173
+### 默认管理员账号
 
-**默认管理员账号：**
 - 用户名：`admin`
 - 密码：`admin123`
+
+⚠️ **首次部署后请立即修改密码！**
 
 ## 使用说明
 
@@ -189,9 +256,64 @@ audio-transcription-app/
 
 所有用户数据都存储在本地，不会上传到云端。
 
+## Docker 部署详细说明
+
+### 构建镜像
+```bash
+docker-compose build
+```
+
+### 启动服务
+```bash
+# 后台运行
+docker-compose up -d
+
+# 前台运行（查看日志）
+docker-compose up
+```
+
+### 管理容器
+```bash
+# 查看状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f
+
+# 重启服务
+docker-compose restart
+
+# 停止服务
+docker-compose stop
+
+# 停止并删除容器
+docker-compose down
+
+# 停止并删除容器和数据卷（⚠️ 会删除所有数据）
+docker-compose down -v
+```
+
+### 数据备份
+```bash
+# 备份数据目录
+tar -czf backup-$(date +%Y%m%d).tar.gz data/
+
+# 恢复数据
+tar -xzf backup-20231117.tar.gz
+```
+
+### 更新应用
+```bash
+# 拉取最新代码
+git pull
+
+# 重新构建并启动
+docker-compose up -d --build
+```
+
 ## 开发说明
 
-### 构建生产版本
+### 本地构建生产版本
 
 **前端：**
 ```bash
@@ -207,10 +329,15 @@ npm start
 
 ### 环境变量
 
-可以创建 `.env` 文件配置环境变量（可选）：
+创建 `.env` 文件配置环境变量：
+```bash
+cp .env.example .env
 ```
+
+可配置项：
+```
+JWT_SECRET=your-secret-key-change-in-production
 PORT=3001
-JWT_SECRET=your-secret-key
 ```
 
 ## 注意事项
@@ -222,17 +349,43 @@ JWT_SECRET=your-secret-key
 
 ## 常见问题
 
+### Docker 相关
+
+**Q: Docker 容器无法启动？**  
+A: 检查端口是否被占用（8080, 3001），或查看日志 `docker-compose logs`。
+
+**Q: 数据存储在哪里？**  
+A: 所有数据存储在 `./data/` 目录，映射到容器外部，删除容器不会丢失数据。
+
+**Q: 如何修改端口？**  
+A: 编辑 `docker-compose.yml` 中的 `ports` 配置，例如改为 `"9090:80"`。
+
+**Q: 如何备份数据？**  
+A: 直接备份 `./data/` 目录即可，包含所有用户数据和文件。
+
+### 应用相关
+
 **Q: 忘记密码怎么办？**  
-A: 删除 `server/database.json`，复制 `database.example.json` 重新开始，或手动编辑数据库文件。
+A: 
+- Docker 部署：删除 `./data/db/database.json`，重启容器会自动创建新数据库
+- 本地部署：删除 `server/database.json`，复制 `database.example.json`
 
 **Q: 如何添加更多 Markdown 文件供引用？**  
-A: 将 `.md` 文件放入 `server/markdown-files/` 目录即可。
+A: 
+- Docker 部署：将 `.md` 文件放入 `./data/markdown-files/` 目录
+- 本地部署：将 `.md` 文件放入 `server/markdown-files/` 目录
 
 **Q: 双链推荐很慢？**  
 A: 大文件（如 bible.md）会影响搜索速度，后端已优化为实时搜索，限制返回 5 个结果。
 
 **Q: 如何在多台设备间同步？**  
-A: 可以使用 Git 同步代码，但需要手动同步 `server/database.json`、`uploads/` 和 `markdown-files/` 目录。
+A: 
+- 使用 Docker：将 `./data/` 目录同步到其他设备
+- 使用 Git：同步代码，手动同步数据目录
+- 使用网络存储：将 `./data/` 目录挂载到 NAS 或云存储
+
+**Q: 上传大文件失败？**  
+A: 检查 nginx 配置中的 `client_max_body_size`，默认为 500M。
 
 ## 更新日志
 

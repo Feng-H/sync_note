@@ -28,3 +28,9 @@ server/database.json
 # 操作系统
 Thumbs.db
 .DS_Store
+
+# Docker 数据目录
+data/
+
+# 环境变量（真实配置）
+.env
