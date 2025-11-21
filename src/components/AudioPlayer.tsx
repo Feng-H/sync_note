@@ -61,6 +61,17 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, audioUrl, s
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current || duration === 0) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = clickX / rect.width;
+    const newTime = percentage * duration;
+    
+    audioRef.current.currentTime = newTime;
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!audioRef.current || (!audioFile && !audioUrl)) return;
 
@@ -91,11 +102,20 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, audioUrl, s
         onPause={() => setIsPlaying(false)}
       />
       <button onClick={togglePlayPause} style={styles.button} disabled={!audioFile && !audioUrl}>
-        {isPlaying ? '暂停' : '播放'}
+        {isPlaying ? '⏸ 暂停' : '▶ 播放'}
       </button>
-      <span style={styles.time}>
-        {formatTime(currentTime)} / {formatTime(duration)}
-      </span>
+      <span style={styles.time}>{formatTime(currentTime)}</span>
+      <div style={styles.progressContainer} onClick={handleProgressClick}>
+        <div style={styles.progressBar}>
+          <div 
+            style={{
+              ...styles.progressFill,
+              width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%'
+            }}
+          />
+        </div>
+      </div>
+      <span style={styles.time}>{formatTime(duration)}</span>
     </div>
   );
 };
@@ -112,15 +132,39 @@ const styles = {
   },
   button: {
     padding: '10px 20px',
-    fontSize: '16px',
+    fontSize: '14px',
     cursor: 'pointer',
     backgroundColor: '#007bff',
     color: 'white',
     border: 'none',
     borderRadius: '5px',
+    fontWeight: 600,
+    transition: 'background-color 0.2s',
   },
   time: {
     fontSize: '14px',
     color: '#333',
+    fontWeight: 500,
+    minWidth: '45px',
+    textAlign: 'center' as const,
+  },
+  progressContainer: {
+    flex: 1,
+    cursor: 'pointer',
+    padding: '10px 0',
+  },
+  progressBar: {
+    width: '100%',
+    height: '8px',
+    backgroundColor: '#ddd',
+    borderRadius: '4px',
+    overflow: 'hidden',
+    position: 'relative' as const,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#007bff',
+    borderRadius: '4px',
+    transition: 'width 0.1s linear',
   },
 };

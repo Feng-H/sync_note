@@ -1,54 +1,35 @@
-# 多阶段构建 - 前端构建阶段
-FROM node:18-alpine AS frontend-builder
+# 使用 Node.js 18 Alpine 作为基础镜像
+FROM node:18-alpine
 
+# 安装必要的工具
+RUN apk add --no-cache nginx bash
+
+# 设置工作目录
 WORKDIR /app
 
-# 复制前端依赖文件
+# 复制项目文件
 COPY package*.json ./
-RUN npm ci
+COPY server/package*.json ./server/
 
-# 复制前端源码
+# 安装所有依赖（包括 devDependencies，用于构建）
+RUN npm ci
+RUN cd server && npm ci
+
+# 复制源代码
 COPY . .
 
 # 构建前端
 RUN npm run build
 
-# 后端构建阶段
-FROM node:18-alpine AS backend-builder
-
-WORKDIR /app/server
-
-# 复制后端依赖文件
-COPY server/package*.json ./
-RUN npm ci
-
-# 复制后端源码
-COPY server/ ./
-
 # 构建后端
-RUN npm run build
+RUN cd server && npm run build
 
-# 生产运行阶段
-FROM node:18-alpine
-
-WORKDIR /app
-
-# 安装 nginx 用于服务前端静态文件
-RUN apk add --no-cache nginx
+# 清理 devDependencies，只保留生产依赖
+RUN npm prune --production
+RUN cd server && npm prune --production
 
 # 创建数据目录
 RUN mkdir -p /app/data/uploads /app/data/markdown-files /app/data/db
-
-# 复制后端构建产物和依赖
-COPY --from=backend-builder /app/server/dist ./server/dist
-COPY --from=backend-builder /app/server/node_modules ./server/node_modules
-COPY --from=backend-builder /app/server/package.json ./server/
-
-# 复制前端构建产物
-COPY --from=frontend-builder /app/dist ./frontend
-
-# 复制示例数据库
-COPY server/database.example.json /app/data/db/database.example.json
 
 # 复制 nginx 配置
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf
@@ -64,5 +45,5 @@ EXPOSE 80 3001
 ENV NODE_ENV=production
 ENV PORT=3001
 
-# 启动脚本
+# 启动
 ENTRYPOINT ["/entrypoint.sh"]

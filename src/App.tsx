@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Login } from './components/Login';
 import { ProjectList } from './components/ProjectList';
 import { AudioPlayer } from './components/AudioPlayer';
@@ -23,7 +23,7 @@ function App() {
   const [seekTime, setSeekTime] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const lastContentLengthRef = useRef(0);
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const handleLogin = (newToken: string, newUsername: string, newIsAdmin: boolean, newMustChangePassword: boolean) => {
     setToken(newToken);
@@ -213,7 +213,6 @@ function App() {
           onChange={handleContentChange}
           timestamps={timestamps}
           onTimestampClick={handleTimestampClick}
-          currentTime={currentTime}
           token={token!}
         />
       </div>

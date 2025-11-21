@@ -8,7 +8,6 @@ interface ObsidianEditorProps {
   onChange: (content: string) => void;
   timestamps: TimestampedText[];
   onTimestampClick: (timestamp: number) => void;
-  currentTime: number;
   token: string;
 }
 
@@ -28,24 +27,21 @@ export const ObsidianEditor: React.FC<ObsidianEditorProps> = ({
   onChange,
   timestamps,
   onTimestampClick,
-  currentTime,
   token,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [cursorPosition, setCursorPosition] = useState(0);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [markdownFiles, setMarkdownFiles] = useState<MarkdownFile[]>([]);
   const [filteredSuggestions, setFilteredSuggestions] = useState<Suggestion[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0 });
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [currentContext, setCurrentContext] = useState<{
     type: 'file' | 'heading';
     filename?: string;
     start: number;
     query: string;
   } | null>(null);
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   // 加载所有 markdown 文件
   useEffect(() => {
@@ -83,28 +79,70 @@ export const ObsidianEditor: React.FC<ObsidianEditorProps> = ({
 
   // 处理 [[链接]] 语法
   const processWikiLinks = (text: string) => {
-    return text.replace(/\[\[([^\]]+)\]\]/g, (match, linkText) => {
+    return text.replace(/\[\[([^\]]+)\]\]/g, (_match, linkText) => {
       return `[${linkText}](#${linkText})`;
     });
   };
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-
-    const range = selection.getRangeAt(0);
-    const preCaretRange = range.cloneRange();
-    preCaretRange.selectNodeContents(e.currentTarget);
-    preCaretRange.setEnd(range.endContainer, range.endOffset);
-    const clickPosition = preCaretRange.toString().length;
-
-    const clickedTimestamp = timestamps.find(
-      (ts) => clickPosition >= ts.startIndex && clickPosition <= ts.endIndex
-    );
-
-    if (clickedTimestamp) {
-      onTimestampClick(clickedTimestamp.timestamp);
+    // 如果没有 timestamps，直接返回
+    if (timestamps.length === 0) {
+      console.log('没有时间戳数据');
+      return;
     }
+
+    const selection = window.getSelection();
+    if (!selection) return;
+
+    // 获取点击位置（在原始文本中的位置）
+    let clickPosition = 0;
+    
+    if (selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(e.currentTarget);
+      preCaretRange.setEnd(range.endContainer, range.endOffset);
+      
+      // 获取纯文本内容（去除 Markdown 渲染后的 HTML）
+      const textContent = preCaretRange.toString();
+      clickPosition = textContent.length;
+    }
+
+    console.log('点击位置:', clickPosition, '内容长度:', content.length);
+
+    // 如果点击位置超出内容范围，使用最后一个时间戳
+    if (clickPosition > content.length) {
+      const lastTimestamp = timestamps[timestamps.length - 1];
+      console.log('点击位置超出范围，使用最后时间戳:', lastTimestamp.timestamp);
+      onTimestampClick(lastTimestamp.timestamp);
+      return;
+    }
+
+    // 查找最接近的时间戳
+    let closestTimestamp = timestamps[0];
+    let minDistance = Math.abs(clickPosition - timestamps[0].startIndex);
+
+    for (const ts of timestamps) {
+      // 如果点击位置在时间戳范围内，直接使用
+      if (clickPosition >= ts.startIndex && clickPosition < ts.endIndex) {
+        closestTimestamp = ts;
+        break;
+      }
+      
+      // 否则找最接近的
+      const distance = Math.min(
+        Math.abs(clickPosition - ts.startIndex),
+        Math.abs(clickPosition - ts.endIndex)
+      );
+      
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestTimestamp = ts;
+      }
+    }
+
+    console.log('找到最接近的时间戳:', closestTimestamp.timestamp, '距离:', minDistance);
+    onTimestampClick(closestTimestamp.timestamp);
   };
 
   // 检查是否在输入双链
@@ -263,7 +301,6 @@ export const ObsidianEditor: React.FC<ObsidianEditorProps> = ({
     const newPosition = e.target.selectionStart;
 
     onChange(newContent);
-    setCursorPosition(newPosition);
 
     // 检查是否在输入双链
     const wikiLink = checkForWikiLink(newContent, newPosition);
@@ -317,7 +354,6 @@ export const ObsidianEditor: React.FC<ObsidianEditorProps> = ({
         // 延迟搜索，避免频繁请求
         searchTimeoutRef.current = setTimeout(async () => {
           try {
-            setIsLoadingSuggestions(true);
             const headings = await api.searchMarkdownHeadings(token, wikiLink.filename!, query);
             console.log('搜索到的标题:', headings);
             
@@ -329,14 +365,12 @@ export const ObsidianEditor: React.FC<ObsidianEditorProps> = ({
             
             setFilteredSuggestions(newSuggestions);
             setSelectedIndex(0);
-            setIsLoadingSuggestions(false);
             
             if (newSuggestions.length > 0) {
               setShowSuggestions(true);
             }
           } catch (err) {
             console.error('搜索标题失败:', err);
-            setIsLoadingSuggestions(false);
           }
         }, 300); // 300ms 延迟
         
@@ -469,14 +503,14 @@ const styles = {
   editorSection: {
     display: 'flex',
     flexDirection: 'column' as const,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#1a1a1a',
     minWidth: 0,
     overflow: 'hidden',
   },
   previewSection: {
     display: 'flex',
     flexDirection: 'column' as const,
-    backgroundColor: '#2d2d2d',
+    backgroundColor: '#2b2b2b',
     minWidth: 0,
     overflow: 'hidden',
   },
@@ -524,8 +558,8 @@ const styles = {
     border: 'none',
     resize: 'none' as const,
     outline: 'none',
-    backgroundColor: '#1e1e1e',
-    color: '#d4d4d4',
+    backgroundColor: '#1a1a1a',
+    color: '#e0e0e0',
     caretColor: '#528bff',
     boxSizing: 'border-box' as const,
   },
@@ -534,8 +568,8 @@ const styles = {
     padding: '20px',
     overflow: 'auto',
     cursor: 'pointer',
-    backgroundColor: '#2d2d2d',
-    color: '#d4d4d4',
+    backgroundColor: '#2b2b2b',
+    color: '#e8e8e8',
     fontSize: '15px',
     lineHeight: '1.6',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",

@@ -311,6 +311,52 @@ git pull
 docker-compose up -d --build
 ```
 
+### 故障排查
+
+#### 运行诊断工具
+```bash
+./docker-test.sh
+```
+
+#### 常见问题
+
+**构建失败：**
+```bash
+# 清理旧的构建缓存
+docker-compose down
+docker system prune -a
+
+# 重新构建
+docker-compose build --no-cache
+```
+
+**端口被占用：**
+```bash
+# 检查端口占用
+lsof -i :8080
+lsof -i :3001
+
+# 修改 docker-compose.yml 中的端口映射
+```
+
+**查看详细日志：**
+```bash
+# 查看构建日志
+docker-compose build
+
+# 查看运行日志
+docker-compose logs -f app
+
+# 进入容器调试
+docker-compose exec app sh
+```
+
+**数据权限问题：**
+```bash
+# 修复数据目录权限
+chmod -R 755 data/
+```
+
 ## 开发说明
 
 ### 本地构建生产版本

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { TimestampedText } from '../types';
 
@@ -7,7 +7,6 @@ interface MarkdownEditorProps {
   onChange: (content: string) => void;
   timestamps: TimestampedText[];
   onTimestampClick: (timestamp: number) => void;
-  currentTime: number;
 }
 
 export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
@@ -15,7 +14,6 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   onChange,
   timestamps,
   onTimestampClick,
-  currentTime,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
