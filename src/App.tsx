@@ -24,6 +24,7 @@ function App() {
   const [currentTime, setCurrentTime] = useState(0);
   const lastContentLengthRef = useRef(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const [presentationWindow, setPresentationWindow] = useState<Window | null>(null);
 
   const handleLogin = (newToken: string, newUsername: string, newIsAdmin: boolean, newMustChangePassword: boolean) => {
     setToken(newToken);
@@ -129,6 +130,44 @@ function App() {
     setSeekTime(adjustedTime);
   };
 
+  // 打开演示窗口
+  const openPresentationMode = () => {
+    if (!currentProject || !token) return;
+    
+    const url = `/presentation?projectId=${currentProject.id}&projectTitle=${encodeURIComponent(currentProject.title)}&token=${token}`;
+    const newWindow = window.open(url, 'presentation', 'width=1200,height=800');
+    
+    if (newWindow) {
+      setPresentationWindow(newWindow);
+    }
+  };
+
+  // 监听演示窗口的消息
+  React.useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'PRESENTATION_READY' && presentationWindow) {
+        // 发送初始内容
+        presentationWindow.postMessage({
+          type: 'CONTENT_UPDATE',
+          content: content,
+        }, '*');
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [presentationWindow, content]);
+
+  // 当内容变化时，同步到演示窗口
+  React.useEffect(() => {
+    if (presentationWindow && !presentationWindow.closed) {
+      presentationWindow.postMessage({
+        type: 'CONTENT_UPDATE',
+        content: content,
+      }, '*');
+    }
+  }, [content, presentationWindow]);
+
   if (!token) {
     return <Login onLogin={handleLogin} />;
   }
@@ -193,14 +232,21 @@ function App() {
           </button>
           <h1 style={styles.h1}>{currentProject?.title || '新建项目'}</h1>
         </div>
-        {!currentProject && (
-          <div style={styles.uploadContainer}>
-            <label style={styles.uploadLabel}>
-              上传录音文件
-              <input type="file" accept="audio/*" onChange={handleFileUpload} style={styles.fileInput} />
-            </label>
-          </div>
-        )}
+        <div style={styles.headerRight}>
+          {currentProject && (
+            <button onClick={openPresentationMode} style={styles.presentationButton}>
+              🎬 演示模式
+            </button>
+          )}
+          {!currentProject && (
+            <div style={styles.uploadContainer}>
+              <label style={styles.uploadLabel}>
+                上传录音文件
+                <input type="file" accept="audio/*" onChange={handleFileUpload} style={styles.fileInput} />
+              </label>
+            </div>
+          )}
+        </div>
       </header>
 
       <div style={styles.playerContainer}>
@@ -237,6 +283,22 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '15px',
+  },
+  headerRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '15px',
+  },
+  presentationButton: {
+    padding: '10px 20px',
+    backgroundColor: '#6c5ce7',
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 600,
+    transition: 'background-color 0.2s',
   },
   h1: {
     margin: 0,

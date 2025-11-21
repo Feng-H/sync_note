@@ -13,6 +13,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, audioUrl, s
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [playbackRate, setPlaybackRate] = useState(1);
 
   useEffect(() => {
     if (audioFile && audioRef.current) {
@@ -72,6 +73,20 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, audioUrl, s
     audioRef.current.currentTime = newTime;
   };
 
+  const handlePlaybackRateChange = (rate: number) => {
+    setPlaybackRate(rate);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = rate;
+    }
+  };
+
+  // 当音频加载时设置播放速度
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackRate;
+    }
+  }, [audioFile, audioUrl, playbackRate]);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!audioRef.current || (!audioFile && !audioUrl)) return;
 
@@ -107,6 +122,23 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, audioUrl, s
       <button onClick={togglePlayPause} style={styles.button} disabled={!audioFile && !audioUrl}>
         {isPlaying ? '⏸ 暂停' : '▶ 播放'}
       </button>
+      
+      <div style={styles.speedControl}>
+        <span style={styles.speedLabel}>速度:</span>
+        <select 
+          value={playbackRate} 
+          onChange={(e) => handlePlaybackRateChange(Number(e.target.value))}
+          style={styles.speedSelect}
+        >
+          <option value={0.5}>0.5x</option>
+          <option value={0.75}>0.75x</option>
+          <option value={1}>1x</option>
+          <option value={1.25}>1.25x</option>
+          <option value={1.5}>1.5x</option>
+          <option value={2}>2x</option>
+        </select>
+      </div>
+      
       <span style={styles.time}>{formatTime(currentTime)}</span>
       <div style={styles.progressContainer} onClick={handleProgressClick}>
         <div style={styles.progressBar}>
@@ -169,5 +201,24 @@ const styles = {
     backgroundColor: '#007bff',
     borderRadius: '4px',
     transition: 'width 0.1s linear',
+  },
+  speedControl: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '5px',
+  },
+  speedLabel: {
+    fontSize: '12px',
+    color: '#666',
+    fontWeight: 500,
+  },
+  speedSelect: {
+    padding: '4px 8px',
+    fontSize: '12px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    backgroundColor: 'white',
+    cursor: 'pointer',
+    outline: 'none',
   },
 };

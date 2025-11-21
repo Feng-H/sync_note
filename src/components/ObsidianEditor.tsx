@@ -31,6 +31,7 @@ export const ObsidianEditor: React.FC<ObsidianEditorProps> = ({
   token,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [markdownFiles, setMarkdownFiles] = useState<MarkdownFile[]>([]);
   const [filteredSuggestions, setFilteredSuggestions] = useState<Suggestion[]>([]);
@@ -48,6 +49,13 @@ export const ObsidianEditor: React.FC<ObsidianEditorProps> = ({
   useEffect(() => {
     loadMarkdownFiles();
   }, [token]);
+
+  // 当内容变化时，自动滚动预览到底部
+  useEffect(() => {
+    if (previewRef.current) {
+      previewRef.current.scrollTop = previewRef.current.scrollHeight;
+    }
+  }, [content]);
 
   // 当显示推荐框时，确保光标可见
   useEffect(() => {
@@ -479,7 +487,7 @@ export const ObsidianEditor: React.FC<ObsidianEditorProps> = ({
           <span style={styles.previewTitle}>预览</span>
           <span style={styles.hint}>点击文本跳转到对应时间点</span>
         </div>
-        <div style={styles.preview} className="obsidian-preview" onClick={handleClick}>
+        <div ref={previewRef} style={styles.preview} className="obsidian-preview" onClick={handleClick}>
           <ReactMarkdown
             rehypePlugins={[rehypeRaw]}
             components={{
