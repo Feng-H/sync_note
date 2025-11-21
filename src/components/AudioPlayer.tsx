@@ -75,7 +75,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioFile, audioUrl, s
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!audioRef.current || (!audioFile && !audioUrl)) return;
 
-    if (e.key === 'ArrowLeft') {
+    if (e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      togglePlayPause();
+    } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
       audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 10);
     } else if (e.key === 'ArrowRight') {

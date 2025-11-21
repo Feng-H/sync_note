@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import { TimestampedText } from '../types';
 import { api } from '../api';
 
@@ -79,9 +80,16 @@ export const ObsidianEditor: React.FC<ObsidianEditorProps> = ({
 
   // 处理 [[链接]] 语法
   const processWikiLinks = (text: string) => {
-    return text.replace(/\[\[([^\]]+)\]\]/g, (_match, linkText) => {
-      return `[${linkText}](#${linkText})`;
+    // 先处理换行：将单个换行转换为两个空格+换行（Markdown 的硬换行）
+    let processed = text.replace(/([^\n])\n([^\n])/g, '$1  \n$2');
+    
+    // 再处理 wiki 链接 - 只显示链接文本，不显示 URL
+    // 使用 <span> 标签而不是 Markdown 链接，避免显示括号内容
+    processed = processed.replace(/\[\[([^\]]+)\]\]/g, (_match, linkText) => {
+      return `<span class="wiki-link">${linkText}</span>`;
     });
+    
+    return processed;
   };
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -473,12 +481,23 @@ export const ObsidianEditor: React.FC<ObsidianEditorProps> = ({
         </div>
         <div style={styles.preview} className="obsidian-preview" onClick={handleClick}>
           <ReactMarkdown
+            rehypePlugins={[rehypeRaw]}
             components={{
-              a: ({ node, ...props }) => (
-                <a {...props} style={styles.wikiLink}>
+              p: ({ node, ...props }) => (
+                <p {...props} style={{ margin: '0.5em 0', whiteSpace: 'pre-wrap' }}>
                   {props.children}
-                </a>
+                </p>
               ),
+              span: ({ node, className, ...props }) => {
+                if (className === 'wiki-link') {
+                  return (
+                    <span {...props} style={styles.wikiLink}>
+                      {props.children}
+                    </span>
+                  );
+                }
+                return <span {...props}>{props.children}</span>;
+              },
             }}
           >
             {processWikiLinks(content) || '*暂无内容*'}
@@ -575,12 +594,12 @@ const styles = {
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   },
   wikiLink: {
-    color: '#7c3aed',
+    color: '#8b9dc3',
     textDecoration: 'none',
     cursor: 'pointer',
     padding: '2px 4px',
     borderRadius: '3px',
-    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+    backgroundColor: 'rgba(139, 157, 195, 0.15)',
     fontWeight: 500,
   },
   suggestionBox: {
