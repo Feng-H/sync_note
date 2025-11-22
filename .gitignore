@@ -1,36 +1,44 @@
-node_modules
-dist
-.DS_Store
-*.log
-npm-debug.log*
+# Dependencies
+node_modules/
+server/node_modules/
 
-# 后端
-server/node_modules
-server/dist
-server/database.db
+# Build outputs
+dist/
+dist-electron/
+server/dist/
+
+# Data files (local development)
+server/database.json
 server/uploads/
 server/markdown-files/
+data/
 
-# 数据库（真实数据库文件，包含用户数据）
-server/database.json
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# 环境变量
+# Environment
 .env
 .env.local
 
-# 编辑器
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# 操作系统
-Thumbs.db
+# OS
 .DS_Store
+Thumbs.db
 
-# Docker 数据目录
-data/
+# Electron
+*.dmg
+*.zip
+*.app
 
-# 环境变量（真实配置）
-.env
+# Temporary files
+/tmp/
+*.tmp

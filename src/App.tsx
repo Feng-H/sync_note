@@ -5,6 +5,7 @@ import { AudioPlayer } from './components/AudioPlayer';
 import { ObsidianEditor } from './components/ObsidianEditor';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { UserManagement } from './components/UserManagement';
+import { InputDialog } from './components/InputDialog';
 import { TimestampedText, Project } from './types';
 import { api } from './api';
 
@@ -25,6 +26,8 @@ function App() {
   const lastContentLengthRef = useRef(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const [presentationWindow, setPresentationWindow] = useState<Window | null>(null);
+  const [showInputDialog, setShowInputDialog] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const handleLogin = (newToken: string, newUsername: string, newIsAdmin: boolean, newMustChangePassword: boolean) => {
     setToken(newToken);
@@ -76,24 +79,69 @@ function App() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('=== 开始上传文件 ===');
     const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith('audio/') || !token) return;
+    console.log('选择的文件:', file?.name, file?.type, file?.size);
+    
+    if (!file) {
+      console.error('没有选择文件');
+      return;
+    }
+    
+    if (!file.type.startsWith('audio/')) {
+      console.error('文件类型不正确:', file.type);
+      alert('请选择音频文件');
+      return;
+    }
+    
+    if (!token) {
+      console.error('没有登录 token');
+      return;
+    }
 
-    const title = prompt('请输入项目名称', '未命名项目');
-    if (!title) return;
+    // 显示输入对话框
+    setPendingFile(file);
+    setShowInputDialog(true);
+  };
+
+  const handleConfirmUpload = async (title: string) => {
+    setShowInputDialog(false);
+    
+    if (!pendingFile || !token) return;
+    
+    console.log('项目名称:', title);
 
     try {
-      const result = await api.createProject(token, title, file);
+      console.log('调用 API 创建项目...');
+      const result = await api.createProject(token, title, pendingFile);
+      console.log('创建项目成功:', result);
+      
+      console.log('获取项目详情...');
       const newProject = await api.getProject(token, result.id);
+      console.log('项目详情:', newProject);
+      
       setCurrentProject(newProject);
-      setAudioFile(file);
+      setAudioFile(pendingFile);
+      const audioUrl = `http://localhost:3001/uploads/${newProject.audio_filename}`;
+      console.log('设置音频 URL:', audioUrl);
+      setAudioUrl(audioUrl);
       setContent('');
       setTimestamps([]);
       lastContentLengthRef.current = 0;
+      setPendingFile(null);
+      
+      console.log('=== 上传完成 ===');
     } catch (err) {
-      alert('上传失败');
+      console.error('=== 上传失败 ===');
+      console.error('错误详情:', err);
+      alert('上传失败: ' + (err instanceof Error ? err.message : String(err)));
     }
+  };
+
+  const handleCancelUpload = () => {
+    setShowInputDialog(false);
+    setPendingFile(null);
   };
 
   const handleContentChange = (newContent: string) => {
@@ -134,7 +182,7 @@ function App() {
   const openPresentationMode = () => {
     if (!currentProject || !token) return;
     
-    const url = `/presentation?projectId=${currentProject.id}&projectTitle=${encodeURIComponent(currentProject.title)}&token=${token}`;
+    const url = `#/presentation?projectId=${currentProject.id}&projectTitle=${encodeURIComponent(currentProject.title)}&token=${token}`;
     const newWindow = window.open(url, 'presentation', 'width=1200,height=800');
     
     if (newWindow) {
@@ -262,6 +310,16 @@ function App() {
           token={token!}
         />
       </div>
+
+      {showInputDialog && (
+        <InputDialog
+          title="请输入项目名称"
+          placeholder="未命名项目"
+          defaultValue="未命名项目"
+          onConfirm={handleConfirmUpload}
+          onCancel={handleCancelUpload}
+        />
+      )}
     </div>
   );
 }

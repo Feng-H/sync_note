@@ -2,7 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcrypt';
 
-const DB_FILE = 'database.json';
+// 使用环境变量指定的数据目录，或使用当前目录
+const DATA_DIR = process.env.USER_DATA_PATH || process.cwd();
+const DB_FILE = path.join(DATA_DIR, 'database.json');
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
+const MARKDOWN_DIR = path.join(DATA_DIR, 'markdown-files');
 
 interface User {
   id: number;
@@ -50,6 +54,15 @@ function saveDatabase() {
 }
 
 export function initDatabase() {
+  console.log('Initializing database...');
+  console.log('Data directory:', DATA_DIR);
+  console.log('Database file:', DB_FILE);
+  
+  // 确保数据目录存在
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+  
   loadDatabase();
 
   const adminExists = db.users.find((u) => u.username === 'admin');
@@ -72,13 +85,15 @@ export function initDatabase() {
     saveDatabase();
   }
 
-  if (!fs.existsSync('uploads')) {
-    fs.mkdirSync('uploads');
+  if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   }
 
-  if (!fs.existsSync('markdown-files')) {
-    fs.mkdirSync('markdown-files');
+  if (!fs.existsSync(MARKDOWN_DIR)) {
+    fs.mkdirSync(MARKDOWN_DIR, { recursive: true });
   }
+  
+  console.log('Database initialized successfully');
 }
 
 export const dbOperations = {
@@ -176,7 +191,7 @@ export const dbOperations = {
 
     // 保存为 markdown 文件
     const filename = `${userId}_${id}_${project.title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_')}.md`;
-    const filepath = path.join('markdown-files', filename);
+    const filepath = path.join(MARKDOWN_DIR, filename);
     fs.writeFileSync(filepath, content, 'utf-8');
 
     return true;
@@ -193,7 +208,7 @@ export const dbOperations = {
 
     // 删除对应的 markdown 文件
     const filename = `${userId}_${id}_${project.title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_')}.md`;
-    const filepath = path.join('markdown-files', filename);
+    const filepath = path.join(MARKDOWN_DIR, filename);
     if (fs.existsSync(filepath)) {
       fs.unlinkSync(filepath);
     }
@@ -203,10 +218,10 @@ export const dbOperations = {
 
   // Markdown 文件管理
   getMarkdownFiles(userId: number): string[] {
-    if (!fs.existsSync('markdown-files')) {
+    if (!fs.existsSync(MARKDOWN_DIR)) {
       return [];
     }
-    const files = fs.readdirSync('markdown-files');
+    const files = fs.readdirSync(MARKDOWN_DIR);
     return files.filter((f) => f.startsWith(`${userId}_`) && f.endsWith('.md'));
   },
 };

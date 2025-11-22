@@ -8,7 +8,7 @@ interface PresentationViewProps {
   token: string;
 }
 
-export const PresentationView: React.FC<PresentationViewProps> = ({ projectId, projectTitle, token }) => {
+export const PresentationView: React.FC<PresentationViewProps> = ({ projectTitle }) => {
   const [content, setContent] = useState('');
   const previewRef = React.useRef<HTMLDivElement>(null);
 

@@ -7,8 +7,24 @@ import db from '../db.js';
 
 const router = express.Router();
 
+// 使用环境变量指定的数据目录，或使用当前目录
+const DATA_DIR = process.env.USER_DATA_PATH || process.cwd();
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
+const MARKDOWN_DIR = path.join(DATA_DIR, 'markdown-files');
+
+// 确保目录存在
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
 const storage = multer.diskStorage({
-  destination: 'uploads/',
+  destination: (req, file, cb) => {
+    // 确保目录存在
+    if (!fs.existsSync(UPLOADS_DIR)) {
+      fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+    }
+    cb(null, UPLOADS_DIR);
+  },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
@@ -22,11 +38,11 @@ router.use(authenticateToken);
 // 获取所有 markdown 文件列表（只返回文件名，不返回标题）- 必须在 /:id 之前
 router.get('/markdown-files', (req: any, res) => {
   try {
-    if (!fs.existsSync('markdown-files')) {
+    if (!fs.existsSync(MARKDOWN_DIR)) {
       return res.json([]);
     }
 
-    const files = fs.readdirSync('markdown-files');
+    const files = fs.readdirSync(MARKDOWN_DIR);
     const markdownFiles = files
       .filter((f: string) => f.endsWith('.md'))
       .map((filename: string) => {
@@ -49,7 +65,7 @@ router.get('/markdown-files/:filename/search', (req: any, res) => {
   try {
     const filename = req.params.filename + '.md';
     const query = (req.query.q as string || '').toLowerCase().trim();
-    const filepath = path.join('markdown-files', filename);
+    const filepath = path.join(MARKDOWN_DIR, filename);
 
     if (!fs.existsSync(filepath)) {
       return res.status(404).json({ error: '文件不存在' });

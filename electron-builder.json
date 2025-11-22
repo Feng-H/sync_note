@@ -1,0 +1,50 @@
+{
+  "appId": "com.noteapp.audio-transcription",
+  "productName": "音频转录助手",
+  "directories": {
+    "output": "dist-electron"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "server/dist/**/*",
+    "server/package.json",
+    "!server/node_modules"
+  ],
+  "asarUnpack": [
+    "server/**/*"
+  ],
+  "afterPack": "./scripts/after-pack.cjs",
+  "mac": {
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["arm64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["arm64"]
+      }
+    ],
+    "category": "public.app-category.productivity",
+    "icon": "build/icon.icns",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "build/entitlements.mac.plist",
+    "entitlementsInherit": "build/entitlements.mac.plist"
+  },
+  "dmg": {
+    "contents": [
+      {
+        "x": 130,
+        "y": 220
+      },
+      {
+        "x": 410,
+        "y": 220,
+        "type": "link",
+        "path": "/Applications"
+      }
+    ]
+  }
+}
